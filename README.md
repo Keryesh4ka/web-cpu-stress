@@ -10,3 +10,4 @@ Each process reports its results (e.g., the number of completed iterations) thro
 Threads and processes operate independently, ensuring parallel execution of the benchmark and data exchange with the client.
 
 Interface:
+![Img](https://github.com/Keryesh4ka/web-cpu-stress/blob/main/assets/example.png)
