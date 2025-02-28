@@ -8,3 +8,5 @@ In each worker task, the heavy_kernel function is executed, optimized with numba
 Each process reports its results (e.g., the number of completed iterations) through a Queue. These data are then sent to the client via WebSocket.
 - Asynchrony and Flexibility:
 Threads and processes operate independently, ensuring parallel execution of the benchmark and data exchange with the client.
+
+Interface:

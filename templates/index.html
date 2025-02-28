@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Системный мониторинг</title>
+  <title>System Monitor</title>
   <style>
     html, body {
       height: 100%;
@@ -111,18 +111,18 @@
 </head>
 <body>
   <div id="console-window">
-    <h3>Консоль вычислений</h3>
+    <h3>Math Log</h3>
     <div id="console-messages"></div>
   </div>
   <div id="main-container">
-    <h1>Системный мониторинг</h1>
+    <h1>System Monitor</h1>
     <h2>CPU Usage</h2>
     <canvas id="cpuChart" width="800" height="200"></canvas>
     <h2>CPU Load Map</h2>
     <div id="cpu-map"></div>
     <div id="benchmark-controls">
       <div style="margin-bottom: 10px;">
-        <label for="cores-select">Количество ядер (макс: {{ max_cores }}):</label>
+        <label for="cores-select">Threads (Max: {{ max_cores }}):</label>
         <input type="number" id="cores-select" min="1" max="{{ max_cores }}" value="{{ max_cores }}">
       </div>
       <button id="startBenchmarkBtn" onclick="startBenchmark()">Start Benchmark</button>
