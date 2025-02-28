@@ -1,0 +1,5 @@
+Flask
+Flask-socketio
+psutil
+numba
+python-socketio

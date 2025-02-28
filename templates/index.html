@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Системный мониторинг</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+    #console-window {
+      width: 300px;
+      background-color: #000;
+      color: #0f0;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      height: 100%;
+    }
+    #console-window::-webkit-scrollbar {
+      display: none;
+    }
+    #console-window {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    #console-messages {
+      height: calc(100% - 40px);
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      padding-right: 5px;
+      box-sizing: border-box;
+    }
+    #console-messages::-webkit-scrollbar {
+      display: none;
+    }
+    #console-messages {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    #main-container {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    h1, h2 {
+      margin: 10px 0;
+    }
+    canvas {
+      background-color: #1e1e1e;
+      border: 1px solid #333;
+      margin-bottom: 20px;
+    }
+    #cpu-map {
+      display: grid;
+      grid-gap: 10px;
+      justify-content: start;
+      margin: 20px auto;
+    }
+    .core {
+      width: 40px;
+      height: 40px;
+      background-color: green;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #888;
+      cursor: default;
+    }
+    input[type="number"] {
+      padding: 5px;
+      font-size: 16px;
+      width: 60px;
+      margin-left: 10px;
+    }
+    @media (max-width: 800px) {
+      body {
+        flex-direction: column;
+      }
+      #main-container {
+        order: 1;
+        width: 100%;
+        height: calc(100vh - 150px);
+      }
+      #console-window {
+        order: 2;
+        width: 100%;
+        height: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="console-window">
+    <h3>Консоль вычислений</h3>
+    <div id="console-messages"></div>
+  </div>
+  <div id="main-container">
+    <h1>Системный мониторинг</h1>
+    <h2>CPU Usage</h2>
+    <canvas id="cpuChart" width="800" height="200"></canvas>
+    <h2>CPU Load Map</h2>
+    <div id="cpu-map"></div>
+    <div id="benchmark-controls">
+      <div style="margin-bottom: 10px;">
+        <label for="cores-select">Количество ядер (макс: {{ max_cores }}):</label>
+        <input type="number" id="cores-select" min="1" max="{{ max_cores }}" value="{{ max_cores }}">
+      </div>
+      <button id="startBenchmarkBtn" onclick="startBenchmark()">Start Benchmark</button>
+      <button id="stopBenchmarkBtn" onclick="stopBenchmark()">Stop Benchmark</button>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+  <script>
+    let cpuHistory = [];
+    let cpuChartCanvas = document.getElementById("cpuChart");
+    let cpuCtx = cpuChartCanvas.getContext("2d");
+    let socket = io();
+    socket.on("system_update", function(data) {
+      if (cpuHistory.length >= 300) { cpuHistory.shift(); }
+      cpuHistory.push(data.cpu);
+      drawChart(cpuCtx, cpuHistory, cpuChartCanvas.width, cpuChartCanvas.height);
+      updateCpuMap(data.cpu_perc);
+    });
+    function drawChart(ctx, data, width, height) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.beginPath();
+      ctx.strokeStyle = "#4CAF50";
+      let step = width / (data.length - 1);
+      for (let i = 0; i < data.length; i++) {
+        let x = i * step;
+        let y = height - (data[i] * height / 100);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+    function updateCpuMap(corePercents) {
+      let cpuMap = document.getElementById("cpu-map");
+      if (cpuMap.childElementCount !== corePercents.length) {
+        cpuMap.innerHTML = "";
+        let count = corePercents.length;
+        let cols = Math.ceil(Math.sqrt(count));
+        cpuMap.style.gridTemplateColumns = "repeat(" + cols + ", 40px)";
+        corePercents.forEach(function() {
+          let div = document.createElement("div");
+          div.className = "core";
+          cpuMap.appendChild(div);
+        });
+      }
+      let cores = cpuMap.getElementsByClassName("core");
+      for (let i = 0; i < corePercents.length; i++) {
+        let percentage = corePercents[i];
+        let red = Math.floor(percentage * 2.55);
+        let green = Math.floor(255 - (percentage * 2.55));
+        cores[i].style.backgroundColor = "rgb(" + red + "," + green + ",0)";
+      }
+    }
+    function startBenchmark() {
+      let coresVal = document.getElementById("cores-select").value;
+      coresVal = parseInt(coresVal);
+      socket.emit("start_benchmark", { cores: coresVal });
+    }
+    function stopBenchmark() {
+      socket.emit("stop_benchmark");
+    }
+    socket.on("benchmark_status", function(data) {
+      if (data.status === "started") {
+        document.getElementById("startBenchmarkBtn").disabled = true;
+      } else if (data.status === "stopped") {
+        document.getElementById("startBenchmarkBtn").disabled = false;
+      }
+    });
+    socket.on("calc_log", function(data) {
+      const consoleDiv = document.getElementById("console-messages");
+      const p = document.createElement("p");
+      p.textContent = data.msg;
+      consoleDiv.appendChild(p);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    });
+  </script>
+</body>
+</html>
